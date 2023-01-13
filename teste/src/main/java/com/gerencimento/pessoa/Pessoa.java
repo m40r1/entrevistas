@@ -3,11 +3,8 @@ package com.gerencimento.pessoa;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.repository.PagingAndSortingRepository;
-import org.springframework.stereotype.Repository;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -20,17 +17,6 @@ record Cep(@NotNull @Min(8) @Max(8) @Pattern(regexp = "/^d{5}(-d{3})?$/") long c
 }
 
 record Endereco(@NotBlank String logradouro, Cep cep, @NotNull long numero, boolean principal) {
-}
-
-@Repository
-interface pessoaRepo extends PagingAndSortingRepository<pessoaVo, Long> {
-    Optional<pessoaVo> findByNome(String nome);
-
-    Stream<pessoaVo> findAll();
-
-    Optional<pessoaVo> findById(long id);
-
-    pessoaVo save(pessoaVo novaPes);
 }
 
 record pessoaVo(@Id Long id, @NotBlank String nome, @NotNull LocalDateTime nascimento, List<Endereco> enderecos) {
