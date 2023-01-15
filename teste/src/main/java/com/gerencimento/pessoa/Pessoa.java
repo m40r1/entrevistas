@@ -1,72 +1,71 @@
 package com.gerencimento.pessoa;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.annotation.Id;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-
-//TODO teste cep validationo
-record Cep(@NotNull @Min(8) @Max(8) @Pattern(regexp = "/^d{5}(-d{3})?$/") long cep) {
-}
-
-record Endereco(@NotBlank String logradouro, Cep cep, @NotNull long numero, boolean principal) {
-}
-
-record pessoaVo(@Id Long id, @NotBlank String nome, @NotNull LocalDateTime nascimento, List<Endereco> enderecos) {
-}
-
+@RestController
 public class Pessoa {
-
-    private final pessoaRepo pessoaRepo;
-
     private Pessoa(final com.gerencimento.pessoa.pessoaRepo pessoaRepo) {
         this.pessoaRepo = pessoaRepo;
     }
 
-    void mudarEndereco(final long id, final Endereco endereco) {
+    private final pessoaRepo pessoaRepo;
+
+    @PutMapping("/endereco/{id}")
+    void mudarEndereco(@PathVariable final long id, @RequestBody final Endereco endereco) {
         // Pegar endereco que a pessoa quer mudar,colocar o novo endereco passado
         // passar o endereco como principal
         // FIXME checar e mudar caso haja outro principal
         pessoaRepo.findById(id).ifPresent(pessoa -> pessoa.enderecos().add(endereco));
     }
 
-    Optional<pessoaVo> acharNome(final String nome) {
+    @GetMapping("/pessoa/{nome}")
+    Optional<pessoaVo> acharNome(@PathVariable final String nome) {
         return pessoaRepo.findByNome(nome);
     };
 
+    @GetMapping("/pessoa")
     List<pessoaVo> consultarPessoas() {
         return pessoaRepo.findAll().toList();
     };
 
-    pessoaVo mudarNome(final String nomeAntigo, final String nome) {
+    @PutMapping("/pessoa/{nome}")
+    pessoaVo mudarNome(@RequestParam(value = "nome") final String nome, @PathVariable final String nomeAntigo) {
         // REVIEW test if map persists the change to the db
-        return pessoaRepo.findByNome(nomeAntigo)
-                .map(pessoa -> new pessoaVo(pessoa.id(), nome, pessoa.nascimento(), pessoa.enderecos())).get();
+        return pessoaRepo.findByNome(nomeAntigo).map(
+                pessoa -> new pessoaVo(pessoa.id(), nome, pessoa.nascimento(), pessoa.enderecos(), pessoa.cidade()))
+                .get();
     };
 
-    List<Endereco> criarEndereco(final Endereco endereco, final String nome) {
+    @PostMapping("/cadastro/endereco")
+    List<Endereco> criarEndereco(@RequestBody final Endereco endereco,
+            @RequestParam(value = "nome") final String nome) {
         // false by default
         pessoaRepo.findByNome(nome).ifPresent(pes -> pes.enderecos().add(endereco));
         return pessoaRepo.findByNome(nome).get().enderecos();
     };
 
-    pessoaVo criarPessoa(final pessoaVo pessoa) {
+    @PostMapping("/cadastro/pessoa")
+    pessoaVo criarPessoa(@RequestBody final pessoaVo pessoa) {
         // REVIEW deal with constructor right?
         return pessoaRepo.save(pessoa);
     };
 
+    @GetMapping("/endereco")
     List<Endereco> listarEnderecos() {
         return pessoaRepo.findAll().flatMap(pes -> pes.enderecos().parallelStream()).toList();
     };
 
-    Optional<Endereco> enderecoPrincipal(final String nome) {
+    @GetMapping("/endereco/{nome}")
+    Optional<Endereco> enderecoPrincipal(@PathVariable final String nome) {
         // REVIEW testar uma forma mais resiliente
         return pessoaRepo.findByNome(nome)
                 .flatMap(pes -> pes.enderecos().stream().filter(endereco -> endereco.principal()).findFirst());
