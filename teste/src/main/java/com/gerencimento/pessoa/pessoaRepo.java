@@ -7,7 +7,7 @@ import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-interface pessoaRepo extends PagingAndSortingRepository<pessoaVo, Long> {
+public interface pessoaRepo extends PagingAndSortingRepository<pessoaVo, Long> {
     Optional<pessoaVo> findByNome(String nome);
 
     Stream<pessoaVo> findAll();
